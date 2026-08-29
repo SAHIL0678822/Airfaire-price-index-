@@ -1,0 +1,13 @@
+playwright
+httpx
+requests
+psycopg2-binary
+pandas
+numpy
+fastapi
+uvicorn
+apscheduler
+pytest
+google-search-results
+streamlit
+plotly
