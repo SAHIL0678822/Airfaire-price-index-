@@ -90,14 +90,25 @@ def normalize_to_index(basket_value):
 
 
 def save_index_to_db(conn, basket_value):
+    """
+    Uses DELETE + INSERT instead of ON CONFLICT, because Postgres never
+    treats NULL values (our route_id for the composite index) as equal for
+    uniqueness checks -- ON CONFLICT silently fails to catch duplicates in
+    that case, which is what caused the duplicate-row bug.
+    """
     with conn.cursor() as cur:
         for _, row in basket_value.iterrows():
             cur.execute(
                 """
+                DELETE FROM daily_index
+                WHERE index_date = %s AND frequency = 'daily' AND route_id IS NULL;
+                """,
+                (row["search_date"],),
+            )
+            cur.execute(
+                """
                 INSERT INTO daily_index (index_date, frequency, index_value, route_id)
-                VALUES (%s, 'daily', %s, NULL)
-                ON CONFLICT (index_date, frequency, route_id)
-                DO UPDATE SET index_value = EXCLUDED.index_value;
+                VALUES (%s, 'daily', %s, NULL);
                 """,
                 (row["search_date"], float(row["index_value"])),
             )
