@@ -1,10 +1,11 @@
 """
 APIx Dashboard -- run with: streamlit run dashboard.py
 
-Visual identity: clean, official light theme in the spirit of Digital India /
-government portals -- white background, navy-blue headings, saffron and
-green accents (tricolor-inspired), card-based layout with a subtle gradient
-header band and icon-led KPI tiles.
+Visual identity: modeled directly on the actual MoSPI (mospi.gov.in) website --
+dark navy hero band with glowing radial background and orange stat callouts,
+a floating white search/lookup card overlapping the hero, chip-style quick
+filters, and light blue-gray card sections for content (matching MoSPI's
+"Offerings" / "Themes" section pattern).
 """
 
 import streamlit as st
@@ -18,191 +19,231 @@ DB_CONFIG = "dbname=apix user=postgres password=yourpassword host=localhost"
 st.set_page_config(page_title="APIx - Airfare Price Index", layout="wide", page_icon="✈️")
 
 # ---------------------------------------------------------------------------
-# THEME
+# THEME -- tokens pulled from the real MoSPI site
 # ---------------------------------------------------------------------------
-BG = "#F5F7FB"
+PAGE_BG = "#EDF1F7"          # light blue-gray section background (Themes/Offerings)
 CARD_BG = "#FFFFFF"
-CARD_BORDER = "#E4E9F1"
-NAVY = "#0B3D91"
-NAVY_DEEP = "#082B69"
+CARD_BORDER = "#DCE3ED"
+NAVY_DARK = "#0A2647"        # deep hero navy
+NAVY = "#0F3D73"
+NAVY_MID = "#144D8F"
+ORANGE = "#F5A300"           # stat-number orange
 SAFFRON = "#FF9933"
 GREEN = "#128807"
 TEXT = "#1A2B45"
-TEXT_MUTED = "#6B7A90"
+TEXT_MUTED = "#5C6B80"
 RED = "#C0392B"
+CHIP_BG = "#E4ECF7"
+CHIP_TEXT = "#0F3D73"
 
 st.markdown(f"""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Inter:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap');
 
 html, body, [class*="css"] {{
     font-family: 'Inter', sans-serif;
 }}
-
 .stApp {{
-    background-color: {BG};
+    background-color: {PAGE_BG};
     color: {TEXT};
 }}
-
 #MainMenu, footer, header {{ visibility: hidden; }}
+.block-container {{ padding-top: 1.2rem; max-width: 1200px; }}
 
-/* Header band */
-.apix-header {{
-    background: linear-gradient(120deg, {NAVY_DEEP} 0%, {NAVY} 55%, #1A56C4 100%);
-    border-radius: 14px;
-    padding: 26px 32px;
-    margin-bottom: 28px;
+/* ---------- Top utility strip (mimics GOI masthead) ---------- */
+.gov-strip {{
     display: flex;
     align-items: center;
     justify-content: space-between;
-    box-shadow: 0 6px 18px rgba(11, 61, 145, 0.18);
+    padding: 6px 4px 10px 4px;
+    border-bottom: 1px solid {CARD_BORDER};
+    margin-bottom: 0;
+    font-size: 0.72rem;
+    color: {TEXT_MUTED};
+}}
+.gov-strip .left {{ display:flex; align-items:center; gap:8px; }}
+.gov-emblem {{
+    width: 30px; height: 30px; border-radius: 50%;
+    background: linear-gradient(135deg, {NAVY} 0%, {NAVY_MID} 100%);
+    display:flex; align-items:center; justify-content:center;
+    color:#fff; font-size:0.85rem; font-weight:700;
+}}
+.gov-strip .ministry-name {{
+    font-weight: 700; color: {NAVY_DARK}; font-size: 0.82rem; line-height:1.2;
+}}
+.gov-strip .ministry-sub {{ font-size: 0.68rem; color: {TEXT_MUTED}; }}
+.gov-badges {{ display:flex; gap:14px; font-size: 0.95rem; color:{NAVY}; }}
+
+/* ---------- Ticker ---------- */
+.ticker-bar {{
+    background: {NAVY};
+    color: #fff;
+    padding: 7px 16px;
+    font-size: 0.78rem;
+    border-radius: 4px;
+    margin: 10px 0 0 0;
+    display:flex; align-items:center; gap:10px;
+    overflow:hidden;
+    white-space:nowrap;
+}}
+.ticker-label {{
+    background: {ORANGE};
+    color: {NAVY_DARK};
+    font-weight: 800;
+    font-size: 0.66rem;
+    letter-spacing: 0.6px;
+    padding: 3px 9px;
+    border-radius: 3px;
+    flex-shrink: 0;
+}}
+.ticker-text {{ font-size: 0.78rem; opacity: 0.95; }}
+
+/* ---------- Hero band ---------- */
+.hero {{
+    background:
+        radial-gradient(circle at 15% 30%, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0) 45%),
+        radial-gradient(circle at 85% 70%, rgba(245,163,0,0.10) 0%, rgba(245,163,0,0) 50%),
+        linear-gradient(120deg, {NAVY_DARK} 0%, {NAVY} 55%, {NAVY_MID} 100%);
+    border-radius: 16px;
+    padding: 40px 40px 76px 40px;
+    margin-top: 14px;
     position: relative;
     overflow: hidden;
 }}
-.apix-header::after {{
-    content: "";
-    position: absolute;
-    top: 0; right: 0; bottom: 0;
-    width: 6px;
-    background: linear-gradient(180deg, {SAFFRON} 0%, #FFFFFF 50%, {GREEN} 100%);
-}}
-.apix-title {{
+.hero-title {{
     font-family: 'Poppins', sans-serif;
     font-weight: 800;
-    font-size: 2.1rem;
+    font-size: 2.3rem;
     color: #FFFFFF;
-    margin: 0;
-    letter-spacing: 0.5px;
+    margin: 0 0 6px 0;
+    text-align: center;
 }}
-.apix-subtitle {{
+.hero-subtitle {{
     font-family: 'Inter', sans-serif;
-    font-size: 0.85rem;
-    color: #D7E2F7;
-    margin: 4px 0 0 0;
+    font-size: 1rem;
+    color: #C9D8EE;
+    text-align: center;
+    margin: 0 0 34px 0;
 }}
-.apix-badge {{
-    background: rgba(255,255,255,0.12);
-    border: 1px solid rgba(255,255,255,0.25);
-    color: #FFFFFF;
-    font-size: 0.72rem;
-    font-weight: 600;
-    letter-spacing: 0.8px;
-    text-transform: uppercase;
-    padding: 6px 14px;
-    border-radius: 20px;
-}}
-
-/* KPI cards */
-.kpi-row {{
+.hero-stats {{
     display: flex;
-    gap: 16px;
-    margin-bottom: 32px;
+    justify-content: center;
+    gap: 60px;
     flex-wrap: wrap;
 }}
-.kpi-tile {{
-    background-color: {CARD_BG};
-    border: 1px solid {CARD_BORDER};
-    border-radius: 12px;
-    padding: 18px 22px;
-    flex: 1;
-    min-width: 175px;
-    box-shadow: 0 2px 10px rgba(11, 61, 145, 0.06);
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
-    position: relative;
-}}
-.kpi-tile:hover {{
-    transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(11, 61, 145, 0.12);
-}}
-.kpi-tile::before {{
-    content: "";
-    position: absolute;
-    left: 0; top: 14px; bottom: 14px;
-    width: 4px;
-    border-radius: 4px;
-    background-color: {NAVY};
-}}
-.kpi-tile.saffron::before {{ background-color: {SAFFRON}; }}
-.kpi-tile.green::before {{ background-color: {GREEN}; }}
-.kpi-icon {{
-    font-size: 1.1rem;
-    margin-bottom: 6px;
-    display: block;
-}}
-.kpi-label {{
-    font-family: 'Inter', sans-serif;
-    font-size: 0.7rem;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    color: {TEXT_MUTED};
-    margin-bottom: 6px;
-    padding-left: 8px;
-}}
-.kpi-value {{
+.hero-stat {{ text-align: center; min-width: 140px; }}
+.hero-stat-icon {{ font-size: 1.4rem; margin-bottom: 6px; opacity: 0.9; }}
+.hero-stat-value {{
     font-family: 'Poppins', sans-serif;
-    font-size: 1.8rem;
     font-weight: 800;
-    color: {NAVY};
-    padding-left: 8px;
+    font-size: 1.9rem;
+    color: {ORANGE};
+    line-height: 1.1;
 }}
-.kpi-value.green {{ color: {GREEN}; }}
-.kpi-value.red {{ color: {RED}; }}
-.kpi-sub {{
-    font-family: 'Inter', sans-serif;
-    font-size: 0.75rem;
-    color: {TEXT_MUTED};
-    margin-top: 2px;
-    padding-left: 8px;
+.hero-stat-value.red {{ color: #FF7A6E; }}
+.hero-stat-value.green {{ color: #6FE39B; }}
+.hero-stat-label {{
+    font-size: 0.76rem;
+    color: #DCE6F5;
+    margin-top: 4px;
+    line-height: 1.3;
 }}
 
-/* Section labels */
-.section-label {{
-    font-family: 'Inter', sans-serif;
-    font-size: 0.72rem;
-    letter-spacing: 1.2px;
-    text-transform: uppercase;
-    color: {NAVY};
+/* ---------- Floating lookup card ---------- */
+.lookup-card {{
+    background: {CARD_BG};
+    border-radius: 14px;
+    box-shadow: 0 10px 30px rgba(10, 38, 71, 0.18);
+    padding: 20px 26px;
+    margin: -52px 24px 26px 24px;
+    position: relative;
+    z-index: 5;
+}}
+.lookup-label {{
+    font-size: 0.78rem;
     font-weight: 700;
-    margin: 4px 0 10px 0;
-    border-left: 3px solid {SAFFRON};
-    padding-left: 8px;
+    color: {TEXT_MUTED};
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}}
+.chip-row {{ display:flex; flex-wrap:wrap; gap:8px; margin-top: 12px; }}
+.chip {{
+    background: {CHIP_BG};
+    color: {CHIP_TEXT};
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 6px 14px;
+    border-radius: 20px;
+    white-space: nowrap;
 }}
 
-/* Tabs */
+/* ---------- Section headers (mimics "Themes" / "What's New") ---------- */
+.section-block {{ margin-top: 8px; margin-bottom: 30px; }}
+.section-head {{
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+}}
+.section-head .icon {{
+    font-size: 1.2rem;
+    color: {NAVY};
+}}
+.section-head .label {{
+    font-family: 'Poppins', sans-serif;
+    font-weight: 700;
+    font-size: 1.15rem;
+    color: {NAVY_DARK};
+}}
+
+/* ---------- Card panel ---------- */
+.panel {{
+    background: {CARD_BG};
+    border: 1px solid {CARD_BORDER};
+    border-radius: 14px;
+    padding: 20px 22px;
+    box-shadow: 0 2px 8px rgba(10,38,71,0.05);
+}}
+
+/* ---------- Tabs styled as nav pills ---------- */
 .stTabs [data-baseweb="tab-list"] {{
-    gap: 4px;
-    border-bottom: 1px solid {CARD_BORDER};
+    gap: 6px;
+    border-bottom: none;
+    background: {CARD_BG};
+    padding: 6px;
+    border-radius: 30px;
+    border: 1px solid {CARD_BORDER};
+    display: inline-flex;
 }}
 .stTabs [data-baseweb="tab"] {{
     background-color: transparent;
     color: {TEXT_MUTED};
     font-family: 'Inter', sans-serif;
     font-weight: 600;
-    font-size: 0.85rem;
-    letter-spacing: 0.5px;
-    padding: 10px 18px;
+    font-size: 0.82rem;
+    padding: 8px 18px;
+    border-radius: 24px;
 }}
 .stTabs [aria-selected="true"] {{
-    color: {NAVY} !important;
-    border-bottom: 3px solid {SAFFRON} !important;
+    color: #FFFFFF !important;
+    background: {NAVY} !important;
 }}
 
-/* Dataframes */
+/* ---------- Dataframes ---------- */
 [data-testid="stDataFrame"] {{
     border: 1px solid {CARD_BORDER};
     border-radius: 10px;
     overflow: hidden;
 }}
 
-/* Volatility badges */
+/* ---------- Badges / route health cards ---------- */
 .badge {{
     display: inline-block;
     padding: 3px 12px;
     border-radius: 14px;
     font-size: 0.72rem;
     font-weight: 700;
-    letter-spacing: 0.3px;
-    white-space: nowrap;
 }}
 .badge-stable {{ background-color: #E6F4EA; color: {GREEN}; }}
 .badge-moderate {{ background-color: #FFF3E0; color: #B36B00; }}
@@ -214,13 +255,12 @@ html, body, [class*="css"] {{
     display:flex; justify-content:space-between; align-items:center;
     padding:12px 16px; border:1px solid {CARD_BORDER}; border-radius:10px;
     margin-bottom:8px; background-color:{CARD_BG};
-    box-shadow: 0 1px 4px rgba(11,61,145,0.04);
 }}
 
 .explain-box {{
-    background: linear-gradient(135deg, #FFF8F0 0%, #FFFFFF 60%);
+    background: linear-gradient(135deg, #FFF6E8 0%, #FFFFFF 65%);
     border: 1px solid {CARD_BORDER};
-    border-left: 4px solid {SAFFRON};
+    border-left: 4px solid {ORANGE};
     border-radius: 10px;
     padding: 18px 22px;
     margin-bottom: 22px;
@@ -234,7 +274,7 @@ html, body, [class*="css"] {{
     color: {TEXT_MUTED};
     border-top: 1px solid {CARD_BORDER};
     padding-top: 14px;
-    margin-top: 40px;
+    margin-top: 30px;
     text-align: center;
 }}
 </style>
@@ -242,13 +282,12 @@ html, body, [class*="css"] {{
 
 
 def themed_layout(fig, title):
-    """Applies the light theme to any Plotly figure."""
     fig.update_layout(
         title=title,
         paper_bgcolor=CARD_BG,
         plot_bgcolor=CARD_BG,
         font=dict(family="Inter, sans-serif", color=TEXT, size=13),
-        title_font=dict(family="Poppins, sans-serif", color=NAVY, size=16),
+        title_font=dict(family="Poppins, sans-serif", color=NAVY_DARK, size=16),
         xaxis=dict(gridcolor=CARD_BORDER, zerolinecolor=CARD_BORDER),
         yaxis=dict(gridcolor=CARD_BORDER, zerolinecolor=CARD_BORDER),
         legend=dict(bgcolor="rgba(0,0,0,0)"),
@@ -297,7 +336,6 @@ def load_data():
         conn,
     )
 
-    # --- Innovation layer tables (safe to be missing on first run) ---
     try:
         route_metrics_df = pd.read_sql(
             """
@@ -326,15 +364,18 @@ def load_data():
 
 
 # ---------------------------------------------------------------------------
-# HEADER
+# TOP UTILITY STRIP (mimics GOI masthead)
 # ---------------------------------------------------------------------------
 st.markdown(f"""
-<div class="apix-header">
-    <div>
-        <div class="apix-title">✈ APIx</div>
-        <div class="apix-subtitle">Real-Time Airfare Price Index — SIH26056 · Ministry of Statistics &amp; Programme Implementation</div>
+<div class="gov-strip">
+    <div class="left">
+        <div class="gov-emblem">GoI</div>
+        <div>
+            <div class="ministry-name">Ministry of Statistics and Programme Implementation</div>
+            <div class="ministry-sub">Prototype built for SIH26056 &middot; National Statistics Office</div>
+        </div>
     </div>
-    <div class="apix-badge">Live Prototype</div>
+    <div class="gov-badges">🔍 &nbsp; 🌐 &nbsp; ♿</div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -345,7 +386,7 @@ if fares_df.empty:
     st.stop()
 
 # ---------------------------------------------------------------------------
-# KPI ROW
+# TICKER
 # ---------------------------------------------------------------------------
 latest_index = index_df.iloc[-1]["index_value"] if not index_df.empty else 100.0
 prev_index = index_df.iloc[-2]["index_value"] if len(index_df) >= 2 else latest_index
@@ -362,57 +403,101 @@ if not confidence_df.empty:
     latest_confidence = confidence_df.iloc[-1]["confidence_score"]
 
 st.markdown(f"""
-<div class="kpi-row">
-    <div class="kpi-tile">
-        <span class="kpi-icon">📊</span>
-        <div class="kpi-label">Current Index</div>
-        <div class="kpi-value">{latest_index:.1f}</div>
-        <div class="kpi-sub">Base period = 100</div>
-    </div>
-    <div class="kpi-tile saffron">
-        <span class="kpi-icon">📈</span>
-        <div class="kpi-label">Day-over-day</div>
-        <div class="kpi-value {change_class}">{change_sign}{change_pct:.1f}%</div>
-        <div class="kpi-sub">vs. previous day</div>
-    </div>
-    <div class="kpi-tile green">
-        <span class="kpi-icon">🗓️</span>
-        <div class="kpi-label">Days Tracked</div>
-        <div class="kpi-value green">{days_tracked}</div>
-        <div class="kpi-sub">since baseline</div>
-    </div>
-    <div class="kpi-tile">
-        <span class="kpi-icon">🧾</span>
-        <div class="kpi-label">Clean Fare Quotes</div>
-        <div class="kpi-value">{total_quotes:,}</div>
-        <div class="kpi-sub">across {routes_tracked} routes</div>
-    </div>
-    {f'''<div class="kpi-tile saffron">
-        <span class="kpi-icon">✅</span>
-        <div class="kpi-label">Data Confidence</div>
-        <div class="kpi-value">{latest_confidence:.0f}%</div>
-        <div class="kpi-sub">today's collection completeness</div>
-    </div>''' if latest_confidence is not None else ""}
+<div class="ticker-bar">
+    <span class="ticker-label">LIVE</span>
+    <span class="ticker-text">
+        Today's APIx: {latest_index:.1f} ({change_sign}{change_pct:.1f}% vs. previous day)
+        &nbsp;•&nbsp; Tracking {routes_tracked} DGCA-weighted routes
+        &nbsp;•&nbsp; {total_quotes:,} clean fare quotes collected
+    </span>
 </div>
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------------------------
-# TABS
+# HERO BAND with stat callouts (mirrors MoSPI homepage stat grid)
+# ---------------------------------------------------------------------------
+confidence_stat_html = f"""
+<div class="hero-stat">
+    <div class="hero-stat-icon">✅</div>
+    <div class="hero-stat-value">{latest_confidence:.0f}%</div>
+    <div class="hero-stat-label">Data Confidence<br/>(today's collection)</div>
+</div>
+""" if latest_confidence is not None else ""
+
+st.markdown(f"""
+<div class="hero">
+    <div class="hero-title">Real-Time Airfare Price Index</div>
+    <div class="hero-subtitle">SIH26056 &middot; A DGCA-weighted, explainable index prototype for MoSPI</div>
+    <div class="hero-stats">
+        <div class="hero-stat">
+            <div class="hero-stat-icon">📊</div>
+            <div class="hero-stat-value">{latest_index:.1f}</div>
+            <div class="hero-stat-label">Current Index<br/>(Base = 100)</div>
+        </div>
+        <div class="hero-stat">
+            <div class="hero-stat-icon">📈</div>
+            <div class="hero-stat-value {change_class}">{change_sign}{change_pct:.1f}%</div>
+            <div class="hero-stat-label">Day-over-day<br/>change</div>
+        </div>
+        <div class="hero-stat">
+            <div class="hero-stat-icon">🗓️</div>
+            <div class="hero-stat-value">{days_tracked}</div>
+            <div class="hero-stat-label">Days Tracked<br/>since baseline</div>
+        </div>
+        {confidence_stat_html}
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
+# ---------------------------------------------------------------------------
+# FLOATING LOOKUP CARD (mirrors MoSPI's floating search card)
+# ---------------------------------------------------------------------------
+route_options = ["All routes"] + sorted(
+    (fares_df["origin"] + "–" + fares_df["destination"]).unique().tolist()
+)
+chip_html = "".join(
+    f'<span class="chip">{r}</span>'
+    for r in sorted((fares_df["origin"] + "-" + fares_df["destination"]).unique().tolist())
+)
+
+st.markdown('<div class="lookup-card">', unsafe_allow_html=True)
+st.markdown('<div class="lookup-label">Quick Route Lookup</div>', unsafe_allow_html=True)
+selected_route = st.selectbox(
+    "Select a route to filter the views below",
+    route_options,
+    label_visibility="collapsed",
+)
+st.markdown(f'<div class="chip-row">{chip_html}</div>', unsafe_allow_html=True)
+st.markdown('</div>', unsafe_allow_html=True)
+
+# Apply route filter where relevant
+if selected_route != "All routes":
+    o, d = selected_route.split("–")
+    filtered_fares = fares_df[(fares_df["origin"] == o) & (fares_df["destination"] == d)]
+else:
+    filtered_fares = fares_df
+
+# ---------------------------------------------------------------------------
+# TABS (styled as nav pills)
 # ---------------------------------------------------------------------------
 tab_trend, tab_heatmap, tab_elasticity, tab_weights, tab_insights = st.tabs(
-    ["📈 Trend", "🔥 Heatmap", "⏱ Elasticity", "⚖️ Weights", "🧠 Insights"]
+    ["Trend", "Heatmap", "Elasticity", "Weights", "Insights"]
 )
 
 with tab_trend:
+    st.markdown('<div class="section-block">', unsafe_allow_html=True)
+    st.markdown('<div class="section-head"><span class="icon">📈</span>'
+                '<span class="label">Index Trend</span></div>', unsafe_allow_html=True)
+    st.markdown('<div class="panel">', unsafe_allow_html=True)
     if len(index_df) >= 2:
         fig = go.Figure()
         fig.add_trace(go.Scatter(
             x=index_df["index_date"], y=index_df["index_value"],
             mode="lines+markers",
             line=dict(color=NAVY, width=2.5),
-            marker=dict(size=7, color=SAFFRON),
+            marker=dict(size=7, color=ORANGE),
             fill="tozeroy",
-            fillcolor="rgba(11, 61, 145, 0.05)",
+            fillcolor="rgba(15, 61, 115, 0.06)",
         ))
         fig.add_hline(y=100, line_dash="dash", line_color=TEXT_MUTED,
                       annotation_text="Base", annotation_font_color=TEXT_MUTED)
@@ -420,16 +505,22 @@ with tab_trend:
         st.plotly_chart(fig, use_container_width=True)
     else:
         st.info(f"Only {len(index_df)} day(s) of index data so far. The trend line "
-                "becomes meaningful as you collect more days — keep running the "
-                "daily pipeline.")
+                "becomes meaningful as you collect more days.")
         st.dataframe(index_df, use_container_width=True)
+    st.markdown('</div></div>', unsafe_allow_html=True)
 
 with tab_heatmap:
-    route_label = fares_df["origin"] + "-" + fares_df["destination"]
-    fares_df = fares_df.assign(route=route_label)
+    st.markdown('<div class="section-block">', unsafe_allow_html=True)
+    st.markdown('<div class="section-head"><span class="icon">🔥</span>'
+                '<span class="label">Fare Heatmap</span></div>', unsafe_allow_html=True)
+    st.markdown('<div class="panel">', unsafe_allow_html=True)
+
+    hm_source = filtered_fares if selected_route == "All routes" else fares_df
+    route_label = hm_source["origin"] + "-" + hm_source["destination"]
+    hm_source = hm_source.assign(route=route_label)
 
     heatmap_data = (
-        fares_df.groupby(["route", "advance_purchase_days"])["total_fare"]
+        hm_source.groupby(["route", "advance_purchase_days"])["total_fare"]
         .mean()
         .reset_index()
         .pivot(index="route", columns="advance_purchase_days", values="total_fare")
@@ -443,7 +534,7 @@ with tab_heatmap:
         z=z,
         x=[f"T+{c}" for c in heatmap_data.columns],
         y=heatmap_data.index,
-        colorscale=[[0, "#EAF1FB"], [0.5, "#8FB8E8"], [1, NAVY]],
+        colorscale=[[0, "#EAF1FB"], [0.5, "#8FB8E8"], [1, NAVY_DARK]],
         colorbar=dict(title="₹", tickfont=dict(color=TEXT)),
         showscale=True,
     ))
@@ -460,17 +551,23 @@ with tab_heatmap:
                 showarrow=False,
                 font=dict(family="Inter, sans-serif", size=13, color=text_color),
             )
-
     st.plotly_chart(fig, use_container_width=True)
+    st.markdown('</div></div>', unsafe_allow_html=True)
 
 with tab_elasticity:
+    st.markdown('<div class="section-block">', unsafe_allow_html=True)
+    st.markdown('<div class="section-head"><span class="icon">⏱</span>'
+                '<span class="label">Fare Elasticity</span></div>', unsafe_allow_html=True)
+    st.markdown('<div class="panel">', unsafe_allow_html=True)
+
+    el_source = fares_df.assign(route=fares_df["origin"] + "-" + fares_df["destination"])
     elasticity_data = (
-        fares_df.groupby(["route", "advance_purchase_days"])["total_fare"]
+        el_source.groupby(["route", "advance_purchase_days"])["total_fare"]
         .mean()
         .reset_index()
     )
 
-    palette = [NAVY, SAFFRON, GREEN, "#8B5CF6", "#C0392B", "#0EA5A5"]
+    palette = [NAVY, ORANGE, GREEN, "#8B5CF6", "#C0392B", "#0EA5A5"]
     fig = px.line(
         elasticity_data, x="advance_purchase_days", y="total_fare", color="route",
         markers=True,
@@ -481,24 +578,28 @@ with tab_elasticity:
     fig.update_xaxes(autorange="reversed")
     fig = themed_layout(fig, "Fare vs. Booking Lead Time, by Route")
     st.plotly_chart(fig, use_container_width=True)
+    st.markdown('</div></div>', unsafe_allow_html=True)
 
 with tab_weights:
-    col1, col2 = st.columns([1.3, 1])
+    st.markdown('<div class="section-block">', unsafe_allow_html=True)
+    st.markdown('<div class="section-head"><span class="icon">⚖️</span>'
+                '<span class="label">DGCA Route Weights</span></div>', unsafe_allow_html=True)
+    st.markdown('<div class="panel">', unsafe_allow_html=True)
 
+    col1, col2 = st.columns([1.3, 1])
     with col1:
         weights_df["route"] = weights_df["origin"] + "-" + weights_df["destination"]
         fig = px.bar(
             weights_df, x="route", y="dgca_weight",
             labels={"dgca_weight": "Weight", "route": "Route"},
-            color_discrete_sequence=[SAFFRON],
+            color_discrete_sequence=[ORANGE],
         )
         fig.update_yaxes(tickformat=".0%")
         fig = themed_layout(fig, "Route Weights (DGCA Traffic-Based)")
         st.plotly_chart(fig, use_container_width=True)
 
     with col2:
-        st.markdown('<div class="kpi-label" style="margin-top:8px;">Weight Table</div>',
-                    unsafe_allow_html=True)
+        st.markdown('<div class="lookup-label">Weight Table</div>', unsafe_allow_html=True)
         st.dataframe(
             weights_df[["route", "dgca_weight"]].assign(
                 dgca_weight=lambda d: (d["dgca_weight"] * 100).round(1).astype(str) + "%"
@@ -506,20 +607,24 @@ with tab_weights:
             use_container_width=True,
             hide_index=True,
         )
-        st.markdown(
-            '<div class="kpi-sub" style="margin-top:10px;">Weights derived from '
-            'DGCA\'s published city-pair passenger traffic data (most recent '
-            'complete year). Source: DGCA, via github.com/Vonter/'
-            'india-aviation-traffic (ODbL license).</div>',
-            unsafe_allow_html=True,
+        st.caption(
+            "Weights derived from DGCA's published city-pair passenger traffic "
+            "data (most recent complete year). Source: DGCA, via github.com/"
+            "Vonter/india-aviation-traffic (ODbL license)."
         )
+    st.markdown('</div></div>', unsafe_allow_html=True)
 
 with tab_insights:
+    st.markdown('<div class="section-block">', unsafe_allow_html=True)
+    st.markdown('<div class="section-head"><span class="icon">🧠</span>'
+                '<span class="label">Explainable Index — Insights</span></div>',
+                unsafe_allow_html=True)
+
     if route_metrics_df.empty:
-        st.info(
-            "No innovation-layer data yet. Run innovation_engine.py after your "
-            "usual fetch → clean → calculate_index steps to populate this tab."
-        )
+        st.markdown('<div class="panel">', unsafe_allow_html=True)
+        st.info("No innovation-layer data yet. Run innovation_engine.py after "
+                "your usual fetch → clean → calculate_index steps.")
+        st.markdown('</div>', unsafe_allow_html=True)
     else:
         latest_date = route_metrics_df["metric_date"].max()
         latest_metrics = route_metrics_df[route_metrics_df["metric_date"] == latest_date].copy()
@@ -546,27 +651,29 @@ with tab_insights:
             st.markdown(f'<div class="explain-box">{"".join(summary_lines)}</div>',
                         unsafe_allow_html=True)
         else:
-            st.info("Contribution analysis needs at least 2 days of collected data to compare against.")
+            st.info("Contribution analysis needs at least 2 days of collected data.")
 
         col1, col2 = st.columns(2)
-
         with col1:
-            st.markdown('<div class="section-label">Contribution to Today\'s Index Change</div>',
+            st.markdown('<div class="panel">', unsafe_allow_html=True)
+            st.markdown('<div class="lookup-label">Contribution to Today\'s Change</div>',
                         unsafe_allow_html=True)
             if not contrib_ranked.empty:
                 fig = px.bar(
                     contrib_ranked, x="contribution_pct", y="route", orientation="h",
                     labels={"contribution_pct": "Contribution %", "route": "Route"},
-                    color_discrete_sequence=[SAFFRON],
+                    color_discrete_sequence=[ORANGE],
                 )
                 fig.update_yaxes(categoryorder="total ascending")
                 fig = themed_layout(fig, "Route Contribution — Latest Day")
                 st.plotly_chart(fig, use_container_width=True)
             else:
                 st.write("Not enough data yet.")
+            st.markdown('</div>', unsafe_allow_html=True)
 
         with col2:
-            st.markdown('<div class="section-label">Route Health Scores</div>',
+            st.markdown('<div class="panel">', unsafe_allow_html=True)
+            st.markdown('<div class="lookup-label">Route Health Scores</div>',
                         unsafe_allow_html=True)
             health_display = latest_metrics.dropna(subset=["health_score"]).sort_values(
                 "health_score", ascending=False
@@ -588,9 +695,10 @@ with tab_insights:
                 )
             if health_display.empty:
                 st.write("Health scores need at least 2 days of data per route.")
+            st.markdown('</div>', unsafe_allow_html=True)
 
-        st.markdown('<div class="section-label" style="margin-top:20px;">Confidence Trend</div>',
-                    unsafe_allow_html=True)
+        st.markdown('<div class="panel" style="margin-top:16px;">', unsafe_allow_html=True)
+        st.markdown('<div class="lookup-label">Confidence Trend</div>', unsafe_allow_html=True)
         if not confidence_df.empty:
             fig = go.Figure()
             fig.add_trace(go.Scatter(
@@ -606,6 +714,8 @@ with tab_insights:
             st.plotly_chart(fig, use_container_width=True)
         else:
             st.write("No confidence data yet.")
+        st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
 st.markdown(
     '<div class="footer-note">Data attribution: DGCA, Ministry of Civil Aviation · '

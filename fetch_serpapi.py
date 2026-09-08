@@ -3,7 +3,7 @@ import psycopg2
 from datetime import date, timedelta
 from serpapi import GoogleSearch
 
-API_KEY = "c137854973860ecebaaf6f451c5e3469106e73faf91bca1d31b06b175877a56a"
+API_KEY = "653af926b5a0d294fd61909d07e0f8e5234bce15cec9ee04e7411f5b8128dacd"
 print(f"DEBUG - Using key: '{API_KEY}'")
 # Your basket of DGCA-weighted routes (IATA airport codes)
 ROUTES = [
